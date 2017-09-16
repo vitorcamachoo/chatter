@@ -10,6 +10,17 @@
     "node": "8.x.x"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "npm run build && npm run server",
+    "build": "webpack",
+    "server": "node server.js",
+    "server:dev": "webpack-dev-server"
+  },
+  "dependencies": {
+    "express": "^4.15.4",
+    "jquery": "^3.2.1",
+    "peerjs": "^0.3.14",
+    "webpack": "^3.6.0",
+    "webpack-dev-server": "^2.8.2",
+    "webpack-html-plugin": "^0.1.1"
   }
 }
