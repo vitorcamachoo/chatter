@@ -4,7 +4,7 @@ import Peer from 'peerjs';
 // Render first view
 triggerView(false);
 
-const peer = new Peer({ key: '4z56oe1wrwj3jtt9' });
+const peer = new Peer({ key: '4z56oe1wrwj3jtt9', secure: true });
 
 peer.on('open', function(){
   $('#my-id').text(`Identification: ${peer.id}`);
