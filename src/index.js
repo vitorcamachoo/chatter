@@ -1,75 +1,104 @@
 import $ from 'jquery';
 import Peer from 'peerjs';
 
+// Render first view
+triggerView(false);
 
-// PeerJS object
-const peer = new Peer({ key: 'lwjd5qra8257b9', debug: 3});
+const peer = new Peer({ key: '4z56oe1wrwj3jtt9' });
 
 peer.on('open', function(){
-  $('#my-id').text(peer.id);
+  $('#my-id').text(`Identification: ${peer.id}`);
 });
 
-// Receiving a call
-peer.on('call', function(call){
-  // Answer the call automatically (instead of prompting user) for demo purposes
-  call.answer(window.localStream);
-  step3(call);
-});
-
-peer.on('error', function(err){
-  alert(err.message);
-  // Return to step 2 if error occurs
-  step2();
-});
-
-// Click handlers setup
-$(function(){
-  $('#make-call').click(function(){
-    // Initiate a call!
-    var call = peer.call($('#callto-id').val(), window.localStream);
-    step3(call);
+peer.on('call', function(call) {
+  getStream().then((localStream) => {
+    call.answer(localStream);
+    renderVideo(call, localStream);
   });
-  $('#end-call').click(function(){
-    window.existingCall.close();
-    step2();
-  });
-  // Retry if getUserMedia fails
-  $('#step1-retry').click(function(){
-    $('#step1-error').hide();
-    step1();
-  });
-  // Get things started
-  step1();
 });
 
-function step1 () {
-  // Get audio/video stream
-  navigator.getUserMedia({audio: true, video: true}, function(stream){
-    // Set your video displays
-    $('#my-video').prop('src', URL.createObjectURL(stream));
-    window.localStream = stream;
-    step2();
-  }, function(){ $('#step1-error').show(); });
-}
 
-function step2 () {
-  $('#step1, #step3').hide();
-  $('#step2').show();
-}
-
-function step3 (call) {
-  // Hang up on an existing call if present
-  if (window.existingCall) {
-    window.existingCall.close();
+// PeerJS object
+function triggerView(isConnected = false) {
+  if(isConnected) {
+    $('#before-connect').hide();
+    $('#after-connect').show();
+  } else {
+    $('#before-connect').show();
+    $('#after-connect').hide();
   }
-  // Wait for stream on the call, then set peer video display
-  call.on('stream', function(stream){
-    $('#their-video').prop('src', URL.createObjectURL(stream));
+}
+
+$('#video-call').click(videoCall);
+$('#send-message').click(sendMessage);
+$('#make-call').click(openConversation);
+
+
+// On receive connection from other user
+peer.on('connection', function(conn) {
+  conn.on('open', onConnect);
+});
+
+peer.on('error', function(error) {
+  console.log('error', error.type);
+});
+
+function onConnect () {
+  window.conn = this;
+  triggerView(true);
+  
+  // Receive messages
+  window.conn.on('data', (message) => printMessage(message, window.conn.peer)); // float left
+}
+
+function printMessage (message, owner) {
+  const timestamp = Date.now();
+  const element = `<div id="chat-message-${timestamp}">${owner}: ${message}</div>`;
+  $('#chat-history').append(element);
+}
+
+function openConversation () {
+  const callToId = $('#connectto-id').val();
+  
+  // To make a connection
+  peer
+    .connect(callToId)
+    .on('open', onConnect);    
+}
+
+function sendMessage () {
+  const { conn } = window;
+  const message = $('#chat-message').val();
+
+  conn.send(message);
+  printMessage(message, peer.id); // can be "me:" and float right
+}
+
+function videoCall () {
+  getStream().then((localStream) => {
+    // Set your video displays
+    const call = peer.call(window.conn.peer, stream);
+
+    renderVideo(call, localStream);
   });
-  // UI stuff
-  window.existingCall = call;
-  $('#their-id').text(call.peer);
-  call.on('close', step2);
-  $('#step1, #step2').hide();
-  $('#step3').show();
+}
+
+function renderStream (stream, type) {
+  $(`#${type}`).prop('src', URL.createObjectURL(stream));
+}
+
+function getStream () {
+  return new Promise((resolve, reject) => {
+    navigator.getUserMedia({audio: true, video: true}, (stream) => {
+      window.stream = stream;
+      resolve(stream);
+    }, reject);
+  }) 
+}
+
+function renderVideo(call, localStream) {
+  call.on('stream', function(visitantStream) {
+    renderStream(localStream, 'owner');
+    renderStream(visitantStream, 'visitant');
+  });
 }

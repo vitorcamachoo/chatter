@@ -24,6 +24,13 @@ module.exports = {
   resolve: {
     modules: ["node_modules"],
   },
+
+  module: {
+    rules:[
+      { test: /\.(html)$/, use: 'html-loader' }
+    ]
+  },
+  
   plugins: [
     new HtmlWebpackPlugin({
       title:'Chatter App', 
